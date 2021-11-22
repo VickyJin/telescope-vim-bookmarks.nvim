@@ -17,12 +17,6 @@ local function get_bookmarks(files, opts)
     for _,file in ipairs(files) do
         for _,line in ipairs(vim.fn['bm#all_lines'](file)) do
             local bookmark = vim.fn['bm#get_bookmark_by_line'](file, line)
-
-            local text = bookmark.annotation ~= "" and "Annotation: " .. bookmark.annotation or bookmark.content
-            if text == "" then
-                text = "(empty line)"
-            end
-
             local only_annotated = opts.only_annotated or false
 
             if not (only_annotated and bookmark.annotation == "") then
@@ -30,7 +24,8 @@ local function get_bookmarks(files, opts)
                     filename = file,
                     lnum = tonumber(line),
                     col=1,
-                    text = text,
+                    content=bookmark.content,
+                    annotation=bookmark.annotation,
                     sign_idx = bookmark.sign_idx,
                 })
             end
@@ -44,12 +39,23 @@ local function make_entry_from_bookmarks(opts)
     opts = opts or {}
     opts.tail_path = utils.get_default(opts.tail_path, true)
 
+    local supposed_total_width = vim.o.columns * 0.8;
+    local content_width = supposed_total_width - 30 - 5 - 60
+    if content_width <= 50 then
+      content_width = 50
+    end
+
     local displayer = entry_display.create {
-        separator = "▏",
+        separator = " ",
         items = {
-            { width = opts.width_line or 5 },
-            { width = opts.width_text or 60 },
-            { remaining = true }
+          -- annotation
+          { width = 30},
+          -- content
+          { width = content_width},
+          -- lineNr
+          { width = opts.width_line or 5 },
+          -- content
+          { remaining = true },
         }
     }
 
@@ -63,13 +69,14 @@ local function make_entry_from_bookmarks(opts)
                 filename = utils.path_shorten(filename)
             end
         end
-
-        local line_info = {entry.lnum, "TelescopeResultsLineNr"}
+        local content = " "..entry.content
+        local annotation = entry.annotation ~= "" and ' '..entry.annotation or ""
 
         return displayer {
-            line_info,
-            entry.text:gsub(".* | ", ""),
-            filename,
+            {annotation, "TelescopeMultiSelection"},
+            content:gsub(".* | ", ""),
+            {entry.lnum, "TelescopeResultsComment"},
+            {filename, "TelescopeResultsComment"},
         }
     end
 
@@ -81,13 +88,14 @@ local function make_entry_from_bookmarks(opts)
             ordinal = (
             not opts.ignore_filename and filename
             or ''
-            ) .. ' ' .. entry.text,
+            ) .. ' ' .. entry.content .. entry.annotation,
             display = make_display,
 
             filename = entry.filename,
             lnum = entry.lnum,
             col = 1,
-            text = entry.text,
+            content = entry.content,
+            annotation = entry.annotation
         }
     end
 end
