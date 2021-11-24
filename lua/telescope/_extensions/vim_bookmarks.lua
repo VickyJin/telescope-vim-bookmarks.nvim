@@ -74,7 +74,8 @@ local function make_entry_from_bookmarks(opts)
 
         return displayer {
             {annotation, "TelescopeMultiSelection"},
-            content:gsub(".* | ", ""),
+            content,
+            -- content:gsub(".* | ", ""),
             {entry.lnum, "TelescopeResultsComment"},
             {filename, "TelescopeResultsComment"},
         }
